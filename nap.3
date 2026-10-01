@@ -1,0 +1,69 @@
+.TH NAP 3 LOCAL
+.SH NAME
+nap, naphz \- sleep for a fraction of a second
+.SH SYNOPSIS
+.B #include <nap.h>
+.PP
+.B nap(ticks)
+.PP
+.B naphz()
+.SH DESCRIPTION
+.I Nap
+suspends the calling process for
+.I ticks
+sixtieths of a second.
+.I Naphz
+returns the number of ticks in one second, as the kernel counts them
+.RI ( HZ ,
+60 on this machine); divide by it to convert, and do not assume the
+value.
+.PP
+Both open
+.B /dev/nap
+on first use and keep the descriptor.  The descriptor has the
+close-on-exec bit set, so it is not inherited across
+.IR exec .
+.SH "RETURN VALUE"
+Zero on success, \-1 with
+.I errno
+set on error.
+.SH ERRORS
+.TP
+.SM ENXIO
+.B /dev/nap
+is missing, or the driver is not in the running kernel.
+.TP
+.SM EINVAL
+.I ticks
+is negative or exceeds
+.SM NAPMAXT
+(two seconds' worth).  Use
+.IR sleep (3)
+for longer delays.
+.TP
+.SM EAGAIN
+Too many processes are napping at once (see
+.SM NNAP
+in the driver).  Retry.
+.TP
+.SM EMFILE
+No descriptor was available for
+.BR /dev/nap .
+.SH "SEE ALSO"
+sleep(3), alarm(2), time(2) for
+.IR ftime ,
+which measures sub-second time but cannot wait for it
+.SH BUGS
+A nap cannot be interrupted by a signal; the signal is delivered when
+the nap ends.  This is deliberate \- V7 has no
+.IR untimeout ()
+with which to cancel the pending callout \- and is why the maximum nap
+is short.
+.PP
+.I Nap
+rounds nothing: it waits between
+.I ticks\-1
+and
+.I ticks
+ticks, because the current tick is already partly spent when the call
+is made.  Ask for one more tick than you need if the floor matters.
